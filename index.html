@@ -8,17 +8,41 @@
 
   <style>
    html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: Arial, sans-serif;
+   margin: 0;
+   padding: 0;
+   height: 100%;
+   font-family: Arial, sans-serif;
    }
 
    #map {
     width: 100%;
     height: 100vh;
    }
+    
+   .titleBox {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    z-index: 1000;
+    width: 390px;
+    background: rgba(255,255,255,0.94);
+    padding: 16px 18px;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+   }
 
+   .titleBox h1 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+   }
+
+   .titleBox p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #333;
+   }
+   
    .control {
     position: absolute;
     top: 15px;
@@ -30,9 +54,16 @@
     box-shadow: 0 4px 18px rgba(0,0,0,0.25);
    }
 
+   .control input {
+    width: 180px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+   }
+
    .control button {
     margin: 4px;
-    padding: 10px 15px;
+    padding: 9px 13px;
     border: 0;
     border-radius: 8px;
     cursor: pointer;
@@ -54,13 +85,24 @@
     border-radius: 10px;
     box-shadow: 0 4px 18px rgba(0,0,0,0.25);
     font-size: 13px;
+    line-height: 1.6;
    }
-</style>
+  </style>
 </head>
 
 <body>
-
+  <div class="titleBox">
+    <h1>서울 커피 지도</h1>
+    <p>
+        2026년 2월 기준 서울시 프랜차이즈 커피전문점을 고가(스타벅스,투썸,할리스,커피빈,파스꾸찌,폴바셋)·저가(메가,컴포즈,더벤티,매머드,바나프레소,빽다방) 브랜드로 분류하고,
+        행정동별 밀도와 고가 브랜드 비율을 시각화한 웹지도입니다.
+    </p>
+  </div>
+  
   <div class="control">
+    <input id="searchBox" type="text" placeholder="행정동 검색 예: 가산동">
+    <button onclick="searchDong()">검색</button>
+    <br><br>
     <button onclick="changeMap('고가밀도')">고가밀도</button>
     <button onclick="changeMap('저가밀도')">저가밀도</button>
     <button onclick="changeMap('고가비율')">고가비율</button>
@@ -80,84 +122,58 @@
 
    var geojsonData = null;
    var geojsonLayer = null;
+   var guLayer = null;
+   var selectedLayer = null;
    var currentField = "고가밀도";
 
-   var goldColors = ['#F6D783', '#EFC55D', '#E5AE3D', '#C8952F', '#9F7523', '#705113', '#3D2B05'];
-   var blueColors = ['#CDDFED', '#A8C6DF', '#83AED1', '#5E96C3', '#417DAD', '#336288', '#254763'];
-   var ratioColors = ['#FFFFFF', '#F8EDDE', '#EFD5B4', '#E6BE8A', '#DDA760', '#D48F36', '#B17526'];
+   var goldColors = ['#FFE2A3', '#F2B84B', '#D99116', '#A86400', '#6B3F00'];
+   var blueColors = ['#CDDFED', '#A8C6DF', '#83AED1', '#417DAD', '#254763'];
+   var ratioColors = ['#F8EDDE', '#EFD5B4', '#DDA760', '#D48F36', '#B17526'];
 
    function getPalette(field) {
-    if (field === "고가밀도") {
-        return goldColors;
-    } else if (field === "저가밀도") {
-        return blueColors;
+    if (field === "고가밀도") return goldColors;
+    if (field === "저가밀도") return blueColors;
+    return ratioColors;
+    }
+
+   function getBreaks(field) {
+    if (field === "고가밀도" || field === "저가밀도") {
+        return [0, 5, 10, 15, 20];
     } else {
-        return ratioColors;
+        return [0, 20, 40, 60, 80];
     }
-   }
-
-   function getBreaks(data, field) {
-    var values = data.features
-        .map(function(f) {
-            return Number(f.properties[field]);
-        })
-        .filter(function(v) {
-            return !isNaN(v) && v > 0;
-        });
-
-    var min = Math.min.apply(null, values);
-    var max = Math.max.apply(null, values);
-    var step = (max - min) / 7;
-
-    var breaks = [];
-    for (var i = 1; i <= 7; i++) {
-        breaks.push(min + step * i);
     }
 
-    return {
-        min: min,
-        max: max,
-        breaks: breaks
-    };
-   }
-
-   function getColor(value, breaks, colors) {
+   function getColor(value, field) {
     if (value === 0 || value == null || isNaN(value)) {
         return '#f2f2f2';
     }
 
-    if (value > breaks[5]) {
-        return colors[6];
-    } else if (value > breaks[4]) {
-        return colors[5];
-    } else if (value > breaks[3]) {
-        return colors[4];
-    } else if (value > breaks[2]) {
-        return colors[3];
-    } else if (value > breaks[1]) {
-        return colors[2];
-    } else if (value > breaks[0]) {
-        return colors[1];
-    } else {
-        return colors[0];
-    }
-   }
+    var colors = getPalette(field);
+    var breaks = getBreaks(field);
 
-   function makePopup(properties) {
-    var html = "<h3>" + properties.ADM_NM + "</h3>";
+    if (value >= breaks[4]) return colors[4];
+    if (value >= breaks[3]) return colors[3];
+    if (value >= breaks[2]) return colors[2];
+    if (value >= breaks[1]) return colors[1];
+    return colors[0];
+    }
+
+   function makePopup(p) {
+    var html = "<h3>" + p.ADM_NM + "</h3>";
 
     if (currentField === "고가밀도") {
-        html += "고가밀도: " + Number(properties.고가밀도).toFixed(2) + "개/km²";
+        html += "고가밀도: " + Number(p.고가밀도).toFixed(2) + "개/km²";
     } else if (currentField === "저가밀도") {
-        html += "저가밀도: " + Number(properties.저가밀도).toFixed(2) + "개/km²";
-    } else if (currentField === "고가비율") {
-        html += "고가매장수: " + properties.고가매장수 + "<br>";
-        html += "저가매장수: " + properties.저가매장수 + "<br>";
-        html += "고가비율: " + Number(properties.고가비율).toFixed(1) + "%";
+        html += "저가밀도: " + Number(p.저가밀도).toFixed(2) + "개/km²";
+    } else {
+        html += "고가매장수: " + p.고가매장수 + "<br>";
+        html += "저가매장수: " + p.저가매장수 + "<br>";
+        html += "고가비율: " + Number(p.고가비율).toFixed(1) + "%";
     }
 
     return html;
-   }
+    }
 
    function drawMap(field) {
     currentField = field;
@@ -166,18 +182,14 @@
         map.removeLayer(geojsonLayer);
     }
 
-    var info = getBreaks(geojsonData, field);
-    var colors = getPalette(field);
-    var breaks = info.breaks;
-
     geojsonLayer = L.geoJSON(geojsonData, {
         style: function(feature) {
             var value = Number(feature.properties[field]);
 
             return {
-                color: '#555',
+                color: '#777',
                 weight: 0.7,
-                fillColor: getColor(value, breaks, colors),
+                fillColor: getColor(value, field),
                 fillOpacity: 0.78
             };
         },
@@ -200,20 +212,90 @@
         }
     }).addTo(map);
 
-    updateLegend(field, info);
-  }
+    if (guLayer !== null) {
+        guLayer.bringToFront();
+    }
 
-   function updateLegend(field, info) {
-    document.getElementById("legend").innerHTML =
-        "<b>" + field + "</b><br>" +
-        "최소값: " + info.min.toFixed(2) + "<br>" +
-        "최대값: " + info.max.toFixed(2) + "<br><br>" +
-        "색이 진할수록 값이 높음";
-  }
+    updateLegend(field);
+   }
 
-   function changeMap(field) {
+  function updateLegend(field) {
+    var colors = getPalette(field);
+
+    var html = "<b>" + field + "</b><br>";
+
+    html += '<span style="background:#f2f2f2;display:inline-block;width:18px;height:12px;border:1px solid #ccc;"></span> 0<br>';
+
+    if (field === "고가밀도" || field === "저가밀도") {
+        html += '<span style="background:' + colors[0] + ';display:inline-block;width:18px;height:12px;"></span> 0 ~ 5개/km²<br>';
+        html += '<span style="background:' + colors[1] + ';display:inline-block;width:18px;height:12px;"></span> 5 ~ 10개/km²<br>';
+        html += '<span style="background:' + colors[2] + ';display:inline-block;width:18px;height:12px;"></span> 10 ~ 15개/km²<br>';
+        html += '<span style="background:' + colors[3] + ';display:inline-block;width:18px;height:12px;"></span> 15 ~ 20개/km²<br>';
+        html += '<span style="background:' + colors[4] + ';display:inline-block;width:18px;height:12px;"></span> 20개/km² 이상<br>';
+    } else {
+        html += '<span style="background:' + colors[0] + ';display:inline-block;width:18px;height:12px;"></span> 0 ~ 20%<br>';
+        html += '<span style="background:' + colors[1] + ';display:inline-block;width:18px;height:12px;"></span> 20 ~ 40%<br>';
+        html += '<span style="background:' + colors[2] + ';display:inline-block;width:18px;height:12px;"></span> 40 ~ 60%<br>';
+        html += '<span style="background:' + colors[3] + ';display:inline-block;width:18px;height:12px;"></span> 60 ~ 80%<br>';
+        html += '<span style="background:' + colors[4] + ';display:inline-block;width:18px;height:12px;"></span> 80 ~ 100%<br>';
+    }
+
+    document.getElementById("legend").innerHTML = html;
+   }
+
+  function changeMap(field) {
+    if (geojsonData === null) {
+        alert("지도 데이터를 불러오는 중입니다.");
+        return;
+    }
+
+    selectedLayer = null;
     drawMap(field);
-  }
+   }
+
+  function searchDong() {
+    var keyword = document.getElementById("searchBox").value.trim();
+    var found = false;
+
+    if (geojsonLayer === null) return;
+
+    geojsonLayer.eachLayer(function(layer) {
+        var name = layer.feature.properties.ADM_NM;
+
+        if (name === keyword) {
+            found = true;
+
+            map.flyToBounds(layer.getBounds(), {
+                duration: 1.3,
+                padding: [70, 70]
+            });
+
+            layer.openPopup();
+
+            if (selectedLayer !== null) {
+                geojsonLayer.resetStyle(selectedLayer);
+            }
+
+            layer.setStyle({
+                color: '#ff3333',
+                weight: 4,
+                fillOpacity: 0.95
+            });
+
+            selectedLayer = layer;
+        }
+    });
+
+    if (!found) {
+        alert("해당 행정동을 찾을 수 없습니다.");
+    }
+   }
+
+   document.getElementById("searchBox").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        searchDong();
+    }
+  });
 
    fetch('static/geojson/coffee_dong_density.geojson')
     .then(function(response) {
@@ -222,6 +304,24 @@
     .then(function(data) {
         geojsonData = data;
         drawMap(currentField);
+
+        return fetch('static/geojson/seoul_gu_boundary.geojson');
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(guData) {
+        guLayer = L.geoJSON(guData, {
+            style: {
+                color: '#222',
+                weight: 2.8,
+                fillOpacity: 0,
+                opacity: 0.95
+            },
+            interactive: false
+        }).addTo(map);
+
+        guLayer.bringToFront();
     });
 </script>
 
