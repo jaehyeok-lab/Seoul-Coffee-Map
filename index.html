@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>서울 커피 지도</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+  <style>
+   html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+   }
+
+   #map {
+    width: 100%;
+    height: 100vh;
+   }
+
+   .control {
+    position: absolute;
+    top: 15px;
+    left: 50px;
+    z-index: 1000;
+    background: white;
+    padding: 12px;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+   }
+
+   .control button {
+    margin: 4px;
+    padding: 10px 15px;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    background: #f1f1f1;
+   }
+
+   .control button:hover {
+    background: #ddd;
+   }
+
+   .legend {
+    position: absolute;
+    bottom: 25px;
+    right: 25px;
+    z-index: 1000;
+    background: white;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+    font-size: 13px;
+   }
+</style>
+</head>
+
+<body>
+
+  <div class="control">
+    <button onclick="changeMap('고가밀도')">고가밀도</button>
+    <button onclick="changeMap('저가밀도')">저가밀도</button>
+    <button onclick="changeMap('고가비율')">고가비율</button>
+  </div>
+
+  <div id="map"></div>
+  <div class="legend" id="legend"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+   var map = L.map('map').setView([37.56, 126.98], 11);
+
+   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CartoDB'
+   }).addTo(map);
+
+   var geojsonData = null;
+   var geojsonLayer = null;
+   var currentField = "고가밀도";
+
+   var goldColors = ['#F6D783', '#EFC55D', '#E5AE3D', '#C8952F', '#9F7523', '#705113', '#3D2B05'];
+   var blueColors = ['#CDDFED', '#A8C6DF', '#83AED1', '#5E96C3', '#417DAD', '#336288', '#254763'];
+   var ratioColors = ['#FFFFFF', '#F8EDDE', '#EFD5B4', '#E6BE8A', '#DDA760', '#D48F36', '#B17526'];
+
+   function getPalette(field) {
+    if (field === "고가밀도") {
+        return goldColors;
+    } else if (field === "저가밀도") {
+        return blueColors;
+    } else {
+        return ratioColors;
+    }
+   }
+
+   function getBreaks(data, field) {
+    var values = data.features
+        .map(function(f) {
+            return Number(f.properties[field]);
+        })
+        .filter(function(v) {
+            return !isNaN(v) && v > 0;
+        });
+
+    var min = Math.min.apply(null, values);
+    var max = Math.max.apply(null, values);
+    var step = (max - min) / 7;
+
+    var breaks = [];
+    for (var i = 1; i <= 7; i++) {
+        breaks.push(min + step * i);
+    }
+
+    return {
+        min: min,
+        max: max,
+        breaks: breaks
+    };
+   }
+
+   function getColor(value, breaks, colors) {
+    if (value === 0 || value == null || isNaN(value)) {
+        return '#f2f2f2';
+    }
+
+    if (value > breaks[5]) {
+        return colors[6];
+    } else if (value > breaks[4]) {
+        return colors[5];
+    } else if (value > breaks[3]) {
+        return colors[4];
+    } else if (value > breaks[2]) {
+        return colors[3];
+    } else if (value > breaks[1]) {
+        return colors[2];
+    } else if (value > breaks[0]) {
+        return colors[1];
+    } else {
+        return colors[0];
+    }
+   }
+
+   function makePopup(properties) {
+    var html = "<h3>" + properties.ADM_NM + "</h3>";
+
+    if (currentField === "고가밀도") {
+        html += "고가밀도: " + Number(properties.고가밀도).toFixed(2) + "개/km²";
+    } else if (currentField === "저가밀도") {
+        html += "저가밀도: " + Number(properties.저가밀도).toFixed(2) + "개/km²";
+    } else if (currentField === "고가비율") {
+        html += "고가매장수: " + properties.고가매장수 + "<br>";
+        html += "저가매장수: " + properties.저가매장수 + "<br>";
+        html += "고가비율: " + Number(properties.고가비율).toFixed(1) + "%";
+    }
+
+    return html;
+   }
+
+   function drawMap(field) {
+    currentField = field;
+
+    if (geojsonLayer !== null) {
+        map.removeLayer(geojsonLayer);
+    }
+
+    var info = getBreaks(geojsonData, field);
+    var colors = getPalette(field);
+    var breaks = info.breaks;
+
+    geojsonLayer = L.geoJSON(geojsonData, {
+        style: function(feature) {
+            var value = Number(feature.properties[field]);
+
+            return {
+                color: '#555',
+                weight: 0.7,
+                fillColor: getColor(value, breaks, colors),
+                fillOpacity: 0.78
+            };
+        },
+
+        onEachFeature: function(feature, layer) {
+            layer.bindPopup(makePopup(feature.properties));
+
+            layer.on({
+                mouseover: function(e) {
+                    e.target.setStyle({
+                        weight: 2,
+                        color: '#111',
+                        fillOpacity: 0.95
+                    });
+                },
+                mouseout: function(e) {
+                    geojsonLayer.resetStyle(e.target);
+                }
+            });
+        }
+    }).addTo(map);
+
+    updateLegend(field, info);
+  }
+
+   function updateLegend(field, info) {
+    document.getElementById("legend").innerHTML =
+        "<b>" + field + "</b><br>" +
+        "최소값: " + info.min.toFixed(2) + "<br>" +
+        "최대값: " + info.max.toFixed(2) + "<br><br>" +
+        "색이 진할수록 값이 높음";
+  }
+
+   function changeMap(field) {
+    drawMap(field);
+  }
+
+   fetch('static/geojson/coffee_dong_density.geojson')
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        geojsonData = data;
+        drawMap(currentField);
+    });
+</script>
+
+</body>
+</html>
