@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>서울 커피 지도</title>
-
+  <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
@@ -21,28 +21,130 @@
     
    .titleBox {
     position: absolute;
-    top: 15px;
-    right: 25px;
-    z-index: 1000;
-    width: 390px;
-    background: rgba(255,255,255,0.94);
-    padding: 16px 18px;
-    border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+    top: 20px;
+    right: 20px;
+    z-index: 3000;
+
+    width: 430px;
+    box-sizing: border-box;
+
+    background: #00755e;
+    padding: 22px 28px;
+    border-radius: 20px;
+
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
    }
 
    .titleBox h1 {
-    margin: 0 0 8px 0;
-    font-size: 24px;
+    margin: 0 0 15px 0;
+
+    font-size: 46px;
+    font-family: 'Arial Black', sans-serif;
+    font-weight: 900;
+    line-height: 1;
+
+    color: #DF8142;
+    letter-spacing: 1px;
+
+    text-shadow:
+        3px 3px 0 #F3D08C,
+        6px 6px 0 rgba(0,0,0,0.18);
    }
 
    .titleBox p {
     margin: 0;
-    font-size: 13px;
-    line-height: 1.55;
-    color: #333;
+
+    font-size: 15px;
+    line-height: 1.7;
+
+    color: #F7F3E8;
    }
    
+   titleHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+   }
+
+   #infoBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+    margin-left: 4px;
+
+    color: #F3D08C;
+    background: transparent;
+
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    vertical-align: middle;
+    }
+
+   .modal {
+    display: none;
+    position: fixed;
+    z-index: 5000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.45);
+    }
+
+   .modalContent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    width: 520px;
+    background: #00755e;
+    color: #F7F3E8;
+    padding: 28px 32px;
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+   }
+
+   .modalContent h2 {
+    margin-top: 0;
+    color: #DF8142;
+   }
+
+   .modalContent p {
+    font-size: 15px;
+    line-height: 1.9;
+	margin-top:10px;
+   }
+   
+   .modalContent b{
+    color:#DF8142;
+    font-size:17px;
+   }
+   
+   .section-title {
+    font-family: 'SBAggroB', Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #222;
+    margin-top: 16px;
+    margin-bottom: 12px;
+   }
+   
+   .closeBtn {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    border: none;
+    background: none;
+    color: #F7F3E8;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+   }
    .control {
     position: absolute;
     top: 15px;
@@ -91,21 +193,73 @@
 </head>
 
 <body>
-  <div class="titleBox">
-    <h1>서울 커피 지도</h1>
+   <div class="titleBox">
+    <h1>서울 커피 지도 ☕</h1>
+	
     <p>
-        2026년 2월 기준 서울시 프랜차이즈 커피전문점을 고가(스타벅스,투썸,할리스,커피빈,파스꾸찌,폴바셋)·저가(메가,컴포즈,더벤티,매머드,바나프레소,빽다방) 브랜드로 분류하고,
-        행정동별 밀도와 고가 브랜드 비율을 시각화한 웹지도입니다.
+        2026년 2월 기준 서울시 프랜차이즈 커피전문점의
+        공간 분포를 행정동 단위로 시각화한 웹지도입니다.
+		<span id="infoBtn" onclick="openModal()">ⓘ</span>
     </p>
-  </div>
+   </div>
   
+   <div id="infoModal" class="modal">
+    <div class="modalContent">
+        <button class="closeBtn" onclick="closeModal()">×</button>
+
+        <h2>☕ 지도 설명</h2>
+		
+        <p>
+        고가 브랜드는 스타벅스, 투썸플레이스, 커피빈, 파스꾸찌, 폴 바셋, 할리스를,<br>
+        저가 브랜드는 메가커피, 컴포즈커피, 매머드커피, 빽다방, 더벤티, 바나프레소를 선정하여 분석했습니다.
+        <br><br>
+
+        <b>고가밀도</b><br>
+        행정동 내 고가 브랜드 매장 수를 면적(㎢)으로 나눈 값
+        <br><br>
+
+        <b>저가밀도</b><br>
+        행정동 내 저가 브랜드 매장 수를 면적(㎢)으로 나눈 값
+        <br><br>
+
+        <b>고가비율</b><br>
+        전체 분석 대상 매장 중 고가 브랜드가 차지하는 비율<br>
+       (고가 매장 수 ÷ 전체 매장 수 × 100)
+       <br><br>
+        
+	   <b>대기업밀도</b><br>
+	   행정동 내 대기업 수를 면적(㎢)으로 나눈 값<br>  
+       대기업 = 종사자 1,000명 이상 사업체 기준 (2024년 데이터) 
+	   <br><br> 
+	   
+       분석 결과는 Leaflet 기반 인터랙티브 단계구분도로 시각화하였으며,
+       행정동을 클릭하거나 검색하여 상세 정보를 확인할 수 있습니다.
+       </p>
+    </div>
+   </div>
+   
   <div class="control">
     <input id="searchBox" type="text" placeholder="행정동 검색 예: 가산동">
     <button onclick="searchDong()">검색</button>
+	
     <br><br>
+    <div class="section-title">커피 분포</div>
+
     <button onclick="changeMap('고가밀도')">고가밀도</button>
     <button onclick="changeMap('저가밀도')">저가밀도</button>
     <button onclick="changeMap('고가비율')">고가비율</button>
+
+    <br><br>
+
+   <div class="section-title">비교하기</div>
+
+    <button onclick="showCompare('high')">고가커피 ↔ 대기업</button>
+
+   <div id="compareButtons" style="margin-top:10px;"></div>
+
+    <br>
+
+    <button onclick="toggleCafePoints()">☕ 카페 위치</button>
   </div>
 
   <div id="map"></div>
@@ -125,16 +279,20 @@
    var guLayer = null;
    var selectedLayer = null;
    var currentField = "고가밀도";
+   var cafePointLayer = null;
+   var cafePointsVisible = false;
 
    var goldColors = ['#FFE2A3', '#F2B84B', '#D99116', '#A86400', '#6B3F00'];
    var blueColors = ['#CDDFED', '#A8C6DF', '#83AED1', '#417DAD', '#254763'];
    var ratioColors = ['#F8EDDE', '#EFD5B4', '#DDA760', '#D48F36', '#B17526'];
 
-   function getPalette(field) {
-    if (field === "고가밀도") return goldColors;
-    if (field === "저가밀도") return blueColors;
-    return ratioColors;
-    }
+    function getPalette(field) {
+     if (field === "고가밀도") return goldColors;
+     if (field === "저가밀도") return blueColors;
+     if (field === "고가비율") return ratioColors;
+     if (field === "대기업밀도") return goldColors;
+     return ratioColors;
+     }
 
    function getBreaks(field) {
     if (field === "고가밀도" || field === "저가밀도") {
@@ -144,36 +302,69 @@
     }
     }
 
-   function getColor(value, field) {
+    function getColor(value, field) {
     if (value === 0 || value == null || isNaN(value)) {
         return '#f2f2f2';
     }
 
     var colors = getPalette(field);
-    var breaks = getBreaks(field);
 
-    if (value >= breaks[4]) return colors[4];
-    if (value >= breaks[3]) return colors[3];
-    if (value >= breaks[2]) return colors[2];
-    if (value >= breaks[1]) return colors[1];
+    if (field === "고가밀도" || field === "저가밀도") {
+        if (value >= 20) return colors[4];
+        if (value >= 15) return colors[3];
+        if (value >= 10) return colors[2];
+        if (value >= 5) return colors[1];
+        return colors[0];
+    }
+
+    else if (field === "대기업밀도") {
+        if (value >= 8) return colors[4];
+        if (value >= 6) return colors[3];
+        if (value >= 4) return colors[2];
+        if (value >= 2) return colors[1];
+        return colors[0];
+    }
+
+    else if (field === "고가비율") {
+        if (value >= 80) return colors[4];
+        if (value >= 60) return colors[3];
+        if (value >= 40) return colors[2];
+        if (value >= 20) return colors[1];
+        return colors[0];
+    }
+
     return colors[0];
     }
 
-   function makePopup(p) {
-    var html = "<h3>" + p.ADM_NM + "</h3>";
+   function makePopup(props) {
 
     if (currentField === "고가밀도") {
-        html += "고가밀도: " + Number(p.고가밀도).toFixed(2) + "개/km²";
-    } else if (currentField === "저가밀도") {
-        html += "저가밀도: " + Number(p.저가밀도).toFixed(2) + "개/km²";
-    } else {
-        html += "고가매장수: " + p.고가매장수 + "<br>";
-        html += "저가매장수: " + p.저가매장수 + "<br>";
-        html += "고가비율: " + Number(p.고가비율).toFixed(1) + "%";
+        return "<b>" + props.ADM_NM + "</b><br>" +
+               "고가매장수: " + props.고가매장수 + "<br>" +
+               "고가밀도: " + Number(props.고가밀도).toFixed(2) + "개/km²";
     }
 
-    return html;
+    if (currentField === "저가밀도") {
+        return "<b>" + props.ADM_NM + "</b><br>" +
+               "저가매장수: " + props.저가매장수 + "<br>" +
+               "저가밀도: " + Number(props.저가밀도).toFixed(2) + "개/km²";
     }
+
+    if (currentField === "고가비율") {
+        return "<b>" + props.ADM_NM + "</b><br>" +
+               "전체매장수: " + props.전체매장수 + "<br>" +
+               "고가매장수: " + props.고가매장수 + "<br>" +
+               "고가비율: " + Number(props.고가비율).toFixed(1) + "%";
+    }
+
+    if (currentField === "대기업밀도") {
+        return "<b>" + props.ADM_NM + "</b><br>" +
+               "대기업수: " + props.대기업수 + "<br>" +
+               "대기업밀도: " + Number(props.대기업밀도).toFixed(2) + "개/km²";
+    }
+
+    return "<b>" + props.ADM_NM + "</b>";
+   }
 
    function drawMap(field) {
     currentField = field;
@@ -232,7 +423,9 @@
         html += '<span style="background:' + colors[2] + ';display:inline-block;width:18px;height:12px;"></span> 10 ~ 15개/km²<br>';
         html += '<span style="background:' + colors[3] + ';display:inline-block;width:18px;height:12px;"></span> 15 ~ 20개/km²<br>';
         html += '<span style="background:' + colors[4] + ';display:inline-block;width:18px;height:12px;"></span> 20개/km² 이상<br>';
-    } else {
+    }
+
+    else if (field === "고가비율") {
         html += '<span style="background:' + colors[0] + ';display:inline-block;width:18px;height:12px;"></span> 0 ~ 20%<br>';
         html += '<span style="background:' + colors[1] + ';display:inline-block;width:18px;height:12px;"></span> 20 ~ 40%<br>';
         html += '<span style="background:' + colors[2] + ';display:inline-block;width:18px;height:12px;"></span> 40 ~ 60%<br>';
@@ -240,8 +433,16 @@
         html += '<span style="background:' + colors[4] + ';display:inline-block;width:18px;height:12px;"></span> 80 ~ 100%<br>';
     }
 
+    else if (field === "대기업밀도") {
+        html += '<span style="background:' + colors[0] + ';display:inline-block;width:18px;height:12px;"></span> 0 ~ 2개/km²<br>';
+        html += '<span style="background:' + colors[1] + ';display:inline-block;width:18px;height:12px;"></span> 2 ~ 4개/km²<br>';
+        html += '<span style="background:' + colors[2] + ';display:inline-block;width:18px;height:12px;"></span> 4 ~ 6개/km²<br>';
+        html += '<span style="background:' + colors[3] + ';display:inline-block;width:18px;height:12px;"></span> 6 ~ 8개/km²<br>';
+        html += '<span style="background:' + colors[4] + ';display:inline-block;width:18px;height:12px;"></span> 8개/km² 이상<br>';
+    }
+
     document.getElementById("legend").innerHTML = html;
-   }
+    }
 
   function changeMap(field) {
     if (geojsonData === null) {
@@ -323,6 +524,80 @@
 
         guLayer.bringToFront();
     });
+    function toggleCafePoints() {
+    if (cafePointsVisible) {
+        map.removeLayer(cafePointLayer);
+        cafePointsVisible = false;
+        return;
+    }
+
+    fetch('static/geojson/coffee_points.geojson')
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            cafePointLayer = L.geoJSON(data, {
+                pointToLayer: function(feature, latlng) {
+                    var color = feature.properties.브랜드유형 === "고가" ? "#228b22" : "#FF4500";
+
+                    return L.circleMarker(latlng, {
+                        radius: 3.4,
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.9,
+                        weight: 0.5
+                    });
+                },
+
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup(
+                        "<b>" + feature.properties.사업장명 + "</b><br>" +
+                        feature.properties.브랜드유형 + " 브랜드"
+                    );
+
+                    layer.on({
+                        mouseover: function() {
+                            layer.openPopup();
+                        },
+                        mouseout: function() {
+                            layer.closePopup();
+                        },
+                        click: function() {
+                            map.flyTo(layer.getLatLng(), 16, {
+                                duration: 1.0
+                            });
+                            layer.openPopup();
+                        }
+                    });
+                }
+            }).addTo(map);
+
+            map.flyTo([37.56, 126.98], 11, {
+                duration: 1.0
+            });
+
+            cafePointsVisible = true;
+        });
+      }
+       function openModal() {
+        document.getElementById("infoModal").style.display = "block";
+        }
+
+       function closeModal() {
+        document.getElementById("infoModal").style.display = "none";
+        }
+	 
+	  function showCompare(type) {
+       var html = "";
+
+       if (type === "high") {
+        html =
+            '<button onclick="changeMap(\'고가밀도\')">고가밀도</button>' +
+            '<button onclick="changeMap(\'대기업밀도\')">대기업밀도</button>';
+       }
+
+    document.getElementById("compareButtons").innerHTML = html;
+   } 
 </script>
 
 </body>
