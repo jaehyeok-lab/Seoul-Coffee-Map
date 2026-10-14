@@ -270,9 +270,10 @@
   <script>
    var map = L.map('map').setView([37.56, 126.98], 11);
 
-   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CartoDB'
-   }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+ }).addTo(map);
 
    var geojsonData = null;
    var geojsonLayer = null;
